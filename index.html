@@ -69,6 +69,22 @@
                     </button>
                     <input type="file" id="file-input" accept=".json" style="display:none;">
                 </div>
+                <button class="btn btn-primary" id="btn-simulide" style="margin-top: 10px; font-size: 0.8rem; background: #2c3e50; border-color: #34495e; width: 100%;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    Exportar SimulIDE (.sim1)
+                </button>
+                <button class="btn btn-primary" id="btn-kicad" style="margin-top: 10px; font-size: 0.8rem; background: #c0392b; border-color: #e74c3c; width: 100%;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    Exportar KiCad (.kicad_sch)
+                </button>
+
+                <!----
+                <button class="btn btn-primary" id="btn-livewire" style="margin-top: 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; width: 100%;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    Exportar Livewire (.lvw)
+                </button>
+                ---->
+
             </div>
 
             <div class="control-group" id="selection-panel" style="display:none;">
@@ -177,8 +193,25 @@
             </div>
         </div>
     </div>
+
+    <!-- Save File Modal -->
+    <div class="modal-overlay" id="save-overlay" style="display: none;">
+        <div class="modal" style="width: 400px;">
+            <div class="modal-header">Guardar Diseño como JSON</div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Nombre del Archivo</label>
+                    <input type="text" id="save-filename" placeholder="mi_fsm" value="fsm_design">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="save-cancel" style="border:none">Cancelar</button>
+                <button class="btn btn-primary" id="save-confirm">Guardar</button>
+            </div>
+        </div>
+    </div>
 </div>
 
-<script src="script.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>

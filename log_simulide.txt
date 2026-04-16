@@ -1,0 +1,95 @@
+  Carcango Compiladores en:
+ /usr/share/simulide/data/codeeditor/compilers/compilers
+
+        Compilador Encontrado:  AScript
+        Compilador Encontrado:  Arduino
+        Compilador Encontrado:  Avrgcc
+        Compilador Encontrado:  Dummy C
+        Compilador Encontrado:  GcBasic
+        Compilador Encontrado:  Make_avrgcc
+        Compilador Encontrado:  Mplabx_xc8
+        Compilador Encontrado:  Mplabx_xc8_12F
+        Compilador Encontrado:  Mplabx_xc8_16Fe
+        Compilador Encontrado:  SDCC-PIC
+        Compilador Encontrado:  SDCC
+
+     Carcango Compiladores en:
+ /usr/share/simulide/data/codeeditor/compilers/assemblers
+
+        Compilador Encontrado:  Asem-51
+        Compilador Encontrado:  Avra
+        Compilador Encontrado:  Avrasm2
+        Compilador Encontrado:  Avrgcc-asm
+        Compilador Encontrado:  Gavrasm
+        Compilador Encontrado:  GpAsm
+        Compilador Encontrado:  sdas8051(SDCC)
+        Compilador Encontrado:  SDCC_asm
+        Compilador Encontrado:  SjASMPlus
+        Compilador Encontrado:  Vasm-6502
+
+     Loading Component sets at:
+ /usr/share/simulide/data
+
+        Loaded Component set:            arduinos.xml
+        Loaded Component set:            avr.xml
+        Loaded Component set:            dig_pot.xml
+        Loaded Component set:            i51.xml
+        Loaded Component set:            ic74.xml
+        Loaded Component set:            icCD.xml
+        Loaded Component set:            keys.xml
+        Loaded Component set:            led_display.xml
+        Loaded Component set:            mcs65.xml
+        Loaded Component set:            pics.xml
+        Loaded Component set:            scripted.xml
+        Loaded Component set:            shields.xml
+        Loaded Component set:            ternary.xml
+        Loaded Component set:            tools.xml
+        Loaded Component set:            unsorted.xml
+        Loaded Component set:            ussr.xml
+        Loaded Component set:            z80.xml
+
+
+
+-------------------------------------------------
+                   NEW CIRCUIT
+-------------------------------------------------
+
+
+-------------------------------------------------
+                   NEW CIRCUIT
+-------------------------------------------------
+
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_14 Switch_6-pinP0
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_22 Buffer_15-out
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_25 FlipFlopD_13-out1
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_32 Switch_1-pinP0
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_34 FlipFlopD_11-out1
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_41 FlipFlopD_11-out1
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_42 Buffer_15-out
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_44 FlipFlopD_13-out0
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_45 Buffer_15-out
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_56 FlipFlopD_13-out0
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_57 Switch_1-pinP0
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_59 FlipFlopD_11-out0
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_60 Switch_1-pinP0
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_62 FlipFlopD_11-out1
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_63 FlipFlopD_13-out1
+
+   ERROR!!  Circuit::loadStrDoc:  null startpin in Connector Connector_64 Buffer_15-out
+Circuit Loaded:
+/home/arky/virtual_disk/gen.sim1
