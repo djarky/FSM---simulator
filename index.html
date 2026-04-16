@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FSM Designer Pro - State Machine Architect</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container">
+    <div class="sidebar" id="sidebar">
+        <button class="sidebar-toggle active" id="sidebar-toggle" aria-label="Toggle Menu">
+            <span></span><span></span><span></span>
+        </button>
+        <div class="header">
+            <h1>FSM Designer Pro</h1>
+            <p id="machine-subtitle">Arquitecto de Máquinas de Mealy</p>
+        </div>
+        <div class="controls">
+            <div class="control-group">
+                <span class="control-label">Modelo de Máquina</span>
+                <div class="machine-toggle">
+                    <button class="btn btn-mode active" id="type-mealy">Mealy</button>
+                    <button class="btn btn-mode" id="type-moore">Moore</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Acciones</span>
+                <div class="mode-toggle-group">
+                    <button class="btn btn-mode active" id="mode-select" title="Seleccionar y mover (Esc)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+                        Seleccionar
+                    </button>
+                    <button class="btn btn-mode" id="mode-add" title="Añadir estado (S)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                        Añadir Estado
+                    </button>
+                    <button class="btn btn-mode" id="mode-connect" title="Conectado de dos toques (C)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        Conectar States
+                    </button>
+                </div>
+                
+                <button class="btn" id="btn-clear" style="margin-top:20px; color:var(--text-muted); font-size:0.75rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Limpiar Todo
+                </button>
+                
+                <button class="btn btn-example" id="btn-example">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+                    Cargar Ejemplo Melay
+                </button>
+            </div>
+
+            <div class="control-group">
+                <span class="control-label">Gestión de Archivos</span>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn" id="btn-save" style="flex: 1; font-size: 0.75rem;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Guardar JSON
+                    </button>
+                    <button class="btn" id="btn-load" style="flex: 1; font-size: 0.75rem;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Cargar JSON
+                    </button>
+                    <input type="file" id="file-input" accept=".json" style="display:none;">
+                </div>
+            </div>
+
+            <div class="control-group" id="selection-panel" style="display:none;">
+                <span class="control-label">Propiedades</span>
+                <div id="prop-edit"></div>
+            </div>
+
+            <div class="control-group">
+                <span class="control-label">Info del Proyecto</span>
+                <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.6;">
+                    • Doble clic para añadir estado.<br>
+                    • Arrastra para mover.<br>
+                    • Presiona 'C' para conectar.<br>
+                    • Escala automática de bits (Base 2).
+                </div>
+            </div>
+
+            <div class="control-group" id="simulation-panel">
+                <span class="control-label">Procesador de Simulación (IO)</span>
+                <div class="io-container">
+                    <div class="io-section">
+                        <span class="io-label">Entrada (X)</span>
+                        <div id="io-inputs" class="io-list"></div>
+                    </div>
+                    <div class="io-section">
+                        <span class="io-label">Salida (Z)</span>
+                        <div id="io-outputs" class="io-list"></div>
+                    </div>
+                    <button class="btn btn-clk" id="btn-clk" style="margin-top:10px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        PULSO CLK
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div style="padding: 20px; border-top: 1px solid var(--border);">
+            <button class="btn btn-primary" id="btn-calculate">
+                GENERAR ANÁLISIS
+            </button>
+        </div>
+    </div>
+
+    <div class="canvas-area">
+        <div class="instruction-toast" id="toast">Doble clic para crear un estado</div>
+        <svg id="fsm-svg">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="24" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" />
+                </marker>
+            </defs>
+            <g id="links-layer"></g>
+            <g id="states-layer"></g>
+        </svg>
+
+        <div class="preview-panel" id="analysis-panel" style="display: none;">
+            <div class="preview-header">
+                <span style="font-weight: 700; color: var(--primary);">RESULTADOS LÓGICOS</span>
+                <div class="tabs">
+                    <div class="tab active" data-tab="truth-table">Tabla</div>
+                    <div class="tab" data-tab="kmaps">K-Maps</div>
+                    <div class="tab" data-tab="equations">Ecuaciones</div>
+                </div>
+                <button id="btn-close-analysis" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem; padding:0 5px;">&times;</button>
+            </div>
+            <div class="tab-content" id="tab-content-area">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Transitions -->
+    <div class="modal-overlay" id="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">Configurar Transición</div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Entrada (X)</label>
+                    <input type="text" id="modal-input" placeholder="0 o 1" value="0" pattern="[01]*">
+                </div>
+                <div class="input-group">
+                    <label>Salida (Z)</label>
+                    <input type="text" id="modal-output" placeholder="Ej: 00" value="00" pattern="[01]*">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-delete" style="display:none; color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.3);">
+                    Borrar
+                </button>
+                <div style="flex:1"></div>
+                <button class="btn btn-secondary" id="modal-cancel" style="border:none">Cancelar</button>
+                <button class="btn btn-primary" id="modal-save">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirm-overlay" style="display: none;">
+        <div class="modal" style="width: 350px;">
+            <div class="modal-header" id="confirm-header">Limpiar Todo</div>
+            <div class="modal-body" id="confirm-body" style="text-align: center;">
+                ¿Estás seguro de que deseas borrar todo el diseño?
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="confirm-cancel" style="border:none">Cancelar</button>
+                <button class="btn btn-primary" id="confirm-save" style="background: var(--secondary); box-shadow: 0 0 15px rgba(255,0,200,0.3);">Sí, Borrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
