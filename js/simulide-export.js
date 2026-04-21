@@ -28,7 +28,7 @@ function getPinOffset(type, pinName, nInputs = 2) {
 }
 
 export function exportToSimulIDE(app, filename) {
-    console.log('[SimulIDE] Tunnel/Tag Version v7 loaded');
+    console.log('[SimulIDE] Tunnel/Tag Version v8 loaded');
     if (app.states.length === 0) {
         alert("Diseña una máquina primero.");
         return;
@@ -282,10 +282,10 @@ export function exportToSimulIDE(app, filename) {
         }
     };
 
-    stateEqs.forEach((eq, i) => processEq(eq, XS + COL_W * 1.0, YS + i * 250, `D${nBits - 1 - i}`));
+    stateEqs.forEach((eq, i) => processEq(eq, XS + COL_W * 1.0, YS + i * 250, `D${i}`));
 
     outputEqs.forEach((eq, i) => {
-        const netZ = `Z${nOut - 1 - i}`;
+        const netZ = `Z${i}`;
         processEq(eq, XS + COL_W * 3.4, YS + (i + nBits) * 200, netZ);
         const ledX = XS + COL_W * 4.8, ledY = YS + (i + nBits) * 200;
         const led = createItem('Led', { Pos: `${ledX},${ledY}`, label: netZ });
