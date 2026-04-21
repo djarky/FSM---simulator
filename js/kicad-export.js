@@ -255,9 +255,9 @@ ${pinDeclarations}
         eqY += 60;
     };
 
-    stateEqs.forEach((eq, i) => buildEquation(eq, `D${nBits - 1 - i}`));
+    stateEqs.forEach((eq, i) => buildEquation(eq, `D${i}`));
     outputEqs.forEach((eq, i) => {
-        const zLbl = `Z${nOut - 1 - i}`;
+        const zLbl = `Z${i}`;
         buildEquation(eq, zLbl);
         const xPos = logicXS + 220; const yPos = YS + i * 20;
         addInstance("Device:LED", `D${i+1}`, 1, xPos, yPos, zLbl, 180, ["1", "2"]);
