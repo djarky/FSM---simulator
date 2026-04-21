@@ -28,7 +28,7 @@ function getPinOffset(type, pinName, nInputs = 2) {
 }
 
 export function exportToSimulIDE(app, filename) {
-    console.log('[SimulIDE] Tunnel/Tag Version v6 loaded');
+    console.log('[SimulIDE] Tunnel/Tag Version v7 loaded');
     if (app.states.length === 0) {
         alert("Diseña una máquina primero.");
         return;
@@ -206,15 +206,19 @@ export function exportToSimulIDE(app, filename) {
         const netQ = `Q${nBits - 1 - i}`;
         const ledX = XS + COL_W * 2.8, ledY = YS + i * 150;
         const led = createItem('Led', { Pos: `${ledX},${ledY}`, label: netQ, Color: "Green" });
-        connectToNet(`${led}-lPin`, netQ, 'in');
+        connectToNet(`${led}-lPin`, netQ, 'in'); // lPin is at +16
         
-        const resX = ledX, resY = ledY + 40;
+        const resX = ledX + 48, resY = ledY;
         const res = createItem('Resistor', { Pos: `${resX},${resY}`, Resistance: "100 Ohm", Show_Val: "true", ShowProp: "Resistance" });
-        createConnector(`${led}-rPin`, `${res}-lPin`, [ledX-16, ledY, resX-16, resY]);
+        // led-rPin is at -16, res-lPin is at -16. We need to connect led-lPin (+16) to res-lPin (-16)
+        // Wait, lPin is input, rPin is output for Led? 
+        // In my logic: connectToNet uses lPin as 'in'. 
+        // So: Tunnel -> lPin (+16) | rPin (-16) -> Resistor-lPin (-16) | Resistor-rPin (+16) -> Ground
+        createConnector(`${led}-rPin`, `${res}-lPin`, [ledX - 16, ledY, resX - 16, resY]);
         
-        const gndX = ledX, gndY = ledY + 72;
+        const gndX = resX + 32, gndY = resY + 8;
         const gnd = createItem('Ground', { Pos: `${gndX},${gndY}` });
-        createConnector(`${res}-rPin`, `${gnd}-Gnd`, [resX+16, resY, gndX, gndY-8]);
+        createConnector(`${res}-rPin`, `${gnd}-Gnd`, [resX + 16, resY, gndX, resY, gndX, gndY - 8]);
     }
 
     const processEq = (eq, targetX, targetY, netOut) => {
@@ -287,13 +291,13 @@ export function exportToSimulIDE(app, filename) {
         const led = createItem('Led', { Pos: `${ledX},${ledY}`, label: netZ });
         connectToNet(`${led}-lPin`, netZ, 'in');
         
-        const resX = ledX, resY = ledY + 40;
+        const resX = ledX + 48, resY = ledY;
         const res = createItem('Resistor', { Pos: `${resX},${resY}`, Resistance: "100 Ohm", Show_Val: "true", ShowProp: "Resistance" });
-        createConnector(`${led}-rPin`, `${res}-lPin`, [ledX-16, ledY, resX-16, resY]);
+        createConnector(`${led}-rPin`, `${res}-lPin`, [ledX - 16, ledY, resX - 16, resY]);
         
-        const gndX = ledX, gndY = ledY + 72;
+        const gndX = resX + 32, gndY = resY + 8;
         const gnd = createItem('Ground', { Pos: `${gndX},${gndY}` });
-        createConnector(`${res}-rPin`, `${gnd}-Gnd`, [resX+16, resY, gndX, gndY-8]);
+        createConnector(`${res}-rPin`, `${gnd}-Gnd`, [resX + 16, resY, gndX, resY, gndX, gndY - 8]);
     });
 
     const xml = `<circuit version="1.1.0" rev="1912+dfsg-4build2" stepSize="1000000" stepsPS="1000000" NLsteps="100000" reaStep="1000000" animate="1" >\n\n${compItems.join('\n\n')}\n\n${connItems.join('\n\n')}\n\n</circuit>`;
