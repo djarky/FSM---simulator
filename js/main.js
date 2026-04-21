@@ -4,7 +4,7 @@ import { getSVGPoint } from './utils.js';
 import { showModal, showConfirm, showSavePrompt } from './modals.js';
 import { updateAnalysis } from './analysis.js';
 import { updateSimulationPanel, triggerClock } from './simulation.js';
-import { exportToSimulIDE } from './simulide-export.js';
+import { exportToSimulIDE } from './simulide-export.js?v=2';
 import { exportToKiCad } from './kicad-export.js';
 import { exportToLivewire } from './livewire-export.js';
 

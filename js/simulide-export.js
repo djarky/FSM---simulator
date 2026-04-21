@@ -2,7 +2,8 @@ import { minimize } from './logic-engine.js';
 import { matchInput } from './models.js';
 
 /**
- * --- SIMULIDE EXPORTER (Junction Node Version) ---
+ * --- SIMULIDE EXPORTER (Strict Tag/Tunnel Version) ---
+ * All signals use Tunnels. No long wires. No Nodes.
  */
 
 const staticPinOffsets = {
@@ -13,7 +14,7 @@ const staticPinOffsets = {
     'Ground': { Gnd: [0, -8] },
     'Buffer': { in0: [-16, 0], out: [16, 0] },
     'FlipFlopD': { in0: [-16, 0], in1: [-16, -8], in2: [16, -8], in3: [-16, 8], out0: [24, 0], out1: [24, 8] },
-    'Node': { pin0: [0,0], pin1: [0,0], pin2: [0,0], pin3: [0,0], pin4: [0,0], pin5: [0,0], pin6: [0,0], pin7: [0,0], pin8: [0,0], pin9: [0,0] }
+    'Tunnel': { pin: [0, 0] }
 };
 
 function getPinOffset(type, pinName, nInputs = 2) {
@@ -23,11 +24,11 @@ function getPinOffset(type, pinName, nInputs = 2) {
         const yOff = (idx - (nInputs - 1) / 2) * 8;
         return [-16, yOff];
     }
-    if (type === 'Node') return [0, 0];
     return (staticPinOffsets[type] || {})[pinName] || [0, 0];
 }
 
 export function exportToSimulIDE(app, filename) {
+    console.log('[SimulIDE] Tunnel/Tag Version v2 loaded');
     if (app.states.length === 0) {
         alert("Diseña una máquina primero.");
         return;
@@ -69,7 +70,6 @@ export function exportToSimulIDE(app, filename) {
     let compItems = [];
     let connItems = [];
     let itemData = {};
-    let pendingConns = []; // Store connections group by source
     let uidCount = 1;
 
     const serializeFields = (type, id, extra) => {
@@ -105,13 +105,16 @@ export function exportToSimulIDE(app, filename) {
             result.Color = "Yellow"; result.Grounded = "false";
             result.Threshold = "2.4 V"; result.MaxCurrent = "0.03 A"; result.Resistance = "0.6 Ohm";
         }
+        if (type === 'Tunnel') {
+            result.Name = extra.Name || "net"; result.IsBus = "false";
+            result.Show_id = "false";
+        }
         for (let k in extra) result[k] = extra[k];
         return Object.entries(result).map(([k, v]) => `${k}="${v}"`).join(' ');
     };
 
     const createItem = (type, props) => {
-        const safeType = type.replace(' ', '_');
-        const id = `${safeType}_${uidCount++}`; 
+        const id = `${type}-${uidCount++}`; 
         compItems.push(`<item ${serializeFields(type, id, props)} />`);
         if (props.Pos) {
             const [x, y] = props.Pos.split(',').map(Number);
@@ -121,144 +124,128 @@ export function exportToSimulIDE(app, filename) {
         return id;
     };
 
-    const queueConnector = (startPinId, endPinId, jitter = 0) => {
-        pendingConns.push({ startPinId, endPinId, jitter });
+    const createStubConnector = (sId, eId, x1, y1, x2, y2) => {
+        connItems.push(`<item itemtype="Connector" uid="Connector-${uidCount++}" startpinid="${sId}" endpinid="${eId}" pointList="${x1},${y1},${x2},${y2}" />`);
+    };
+
+    const connectToNet = (pinId, netName, direction = 'in') => {
+        const parts = pinId.split('-'), pinName = parts.pop(), compId = parts.join('-');
+        const comp = itemData[compId];
+        if(!comp) return;
+        const off = getPinOffset(comp.type, pinName, comp.nInps);
+        const x1 = comp.x + off[0], y1 = comp.y + off[1];
+        
+        // Offset tunnel: 24 pixels away
+        const dist = 24;
+        const tx = x1 + (direction === 'in' ? -dist : dist);
+        const ty = y1;
+        const hflip = (direction === 'in') ? "1" : "-1";
+        
+        const tunnelId = createItem('Tunnel', { Pos: `${tx},${ty}`, Name: netName, hflip: hflip, label: `Tunnel-${uidCount}` });
+        
+        // Create the direct stub connector
+        if (direction === 'in') {
+            createStubConnector(`${tunnelId}-pin`, pinId, tx, ty, x1, y1);
+        } else {
+            createStubConnector(pinId, `${tunnelId}-pin`, x1, y1, tx, ty);
+        }
     };
 
     // --- Layout ---
-    const XS = -600, YS = -250, COL_W = 220;
+    const XS = -600, YS = -250, COL_W = 240;
 
-    const xInIds = [];
+    // Inputs (Switches)
     for (let i = 0; i < nIn; i++) {
-        const sw = createItem('Switch', { Pos: `${XS},${YS + i * 80}`, label: `X${nIn - 1 - i}`, hflip: "-1" });
-        xInIds.push(sw);
-        const rail = createItem('Rail', { Pos: `${XS - 20},${YS + i * 80}`, Show_Val: "true", ShowProp: "Voltage", Voltage: "5 V", rotation: "90" });
-        queueConnector(`${sw}-switch1pinN`, `${rail}-outnod`);
-        const gnd = createItem('Ground', { Pos: `${XS - 20},${YS + i * 80 + 30}` });
-        queueConnector(`${sw}-switch0pinN`, `${gnd}-Gnd`);
+        const name = `X${nIn - 1 - i}`;
+        const swX = XS, swY = YS + i * 80;
+        const sw = createItem('Switch', { Pos: `${swX},${swY}`, label: name, hflip: "-1" });
+        
+        const railX = XS - 24, railY = swY;
+        const rail = createItem('Rail', { Pos: `${railX},${railY}`, Show_Val: "true", ShowProp: "Voltage", Voltage: "5 V", rotation: "90" });
+        createStubConnector(`${sw}-switch1pinN`, `${rail}-outnod`, swX-16, swY-8, railX, railY+16);
+        
+        const gndX = XS - 24, gndY = swY + 32;
+        const gnd = createItem('Ground', { Pos: `${gndX},${gndY}` });
+        createStubConnector(`${sw}-switch0pinN`, `${gnd}-Gnd`, swX-16, swY, gndX, gndY-8);
+        
+        connectToNet(`${sw}-pinP0`, name, 'out');
+        
+        // Inverter (Buffer)
+        const inv = createItem('Buffer', { Pos: `${XS + 80},${YS + i * 80 + 40}`, Inverted: "true", label: `!${name}` });
+        connectToNet(`${inv}-in0`, name, 'in');
+        connectToNet(`${inv}-out`, `not${name}`, 'out');
     }
-    const clk = createItem('Switch', { Pos: `${XS},${YS + nIn * 80 + 20}`, label: "CLK", hflip: "-1" });
-    const cRail = createItem('Rail', { Pos: `${XS - 20},${YS + nIn * 80 + 20}`, Show_Val: "true", ShowProp: "Voltage", Voltage: "5 V", rotation: "90" });
-    queueConnector(`${clk}-switch1pinN`, `${cRail}-outnod`);
-    const cGnd = createItem('Ground', { Pos: `${XS - 20},${YS + nIn * 80 + 50}` });
-    queueConnector(`${clk}-switch0pinN`, `${cGnd}-Gnd`);
 
+    // Clock (Switch)
+    const clkY = YS + nIn * 80 + 20;
+    const clk = createItem('Switch', { Pos: `${XS},${clkY}`, label: "CLK", hflip: "-1" });
+    const cRail = createItem('Rail', { Pos: `${XS - 24},${clkY}`, Show_Val: "true", ShowProp: "Voltage", Voltage: "5 V", rotation: "90" });
+    createStubConnector(`${clk}-switch1pinN`, `${cRail}-outnod`, XS-16, clkY-8, XS-24, clkY+16);
+    const cGnd = createItem('Ground', { Pos: `${XS - 24},${clkY + 32}` });
+    createStubConnector(`${clk}-switch0pinN`, `${cGnd}-Gnd`, XS-16, clkY, XS-24, clkY+24);
+    connectToNet(`${clk}-pinP0`, "CLK", 'out');
+
+    // Flip-Flops
     const ffIds = [];
     for (let i = 0; i < nBits; i++) {
-        const ff = createItem('FlipFlopD', { Pos: `${XS + COL_W * 2},${YS + i * 150}`, label: `Q${nBits - 1 - i}` });
+        const name = `Q${nBits - 1 - i}`;
+        const ff = createItem('FlipFlopD', { Pos: `${XS + COL_W * 2},${YS + i * 150}`, label: name });
         ffIds.push(ff);
-        queueConnector(`${clk}-pinP0`, `${ff}-in3`, i * 5);
+        connectToNet(`${ff}-in3`, "CLK", 'in');
+        connectToNet(`${ff}-in0`, `D${nBits - 1 - i}`, 'in');
+        connectToNet(`${ff}-out0`, name, 'out');
+        connectToNet(`${ff}-out1`, `not${name}`, 'out');
     }
 
-    const xInvIds = [];
-    for (let i = 0; i < nIn; i++) {
-        const inv = createItem('Buffer', { Pos: `${XS + COL_W * 0.5},${YS + i * 80 + 40}`, Inverted: "true", label: `!X${nIn - 1 - i}` });
-        xInvIds.push(inv);
-        queueConnector(`${xInIds[i]}-pinP0`, `${inv}-in0`, 10);
-    }
-
-    const processEq = (eq, targetX, targetY, label) => {
+    const processEq = (eq, targetX, targetY, netOut) => {
         const ands = [];
         eq.selection.forEach((sel, termIdx) => {
             const pi = sel.pi;
             let nI = 0; for (let c of pi) if (c !== '-') nI++;
             if (nI === 0) return;
-            const and = createItem('And Gate', { Pos: `${targetX},${targetY + termIdx * 80}`, Num_Inputs: `${nI} _Inputs` });
+            const and = createItem('And Gate', { Pos: `${targetX},${targetY + termIdx * 100}`, Num_Inputs: `${nI} _Inputs` });
             ands.push(and);
             for (let i = 0, curI = 0; i < nVars; i++) {
                 if (pi[i] === '-') continue;
-                const tp = `${and}-in${curI++}`;
-                const jitter = (i * 2 + termIdx * 3);
-                if (i < nBits) {
-                    const sp = pi[i] === '1' ? `${ffIds[i]}-out0` : `${ffIds[i]}-out1`;
-                    queueConnector(sp, tp, jitter);
-                } else {
-                    const vIdx = i - nBits;
-                    const sp = pi[i] === '1' ? `${xInIds[vIdx]}-pinP0` : `${xInvIds[vIdx]}-out`;
-                    queueConnector(sp, tp, jitter);
-                }
+                const netName = i < nBits ? (pi[i] === '1' ? `Q${nBits-1-i}` : `notQ${nBits-1-i}`) 
+                                         : (pi[i] === '1' ? `X${nIn-1-(i-nBits)}` : `notX${nIn-1-(i-nBits)}`);
+                connectToNet(`${and}-in${curI++}`, netName, 'in');
             }
         });
-        if (ands.length === 0) return null;
-        if (ands.length === 1) return `${ands[0]}-out`;
-        const or = createItem('Or Gate', { Pos: `${targetX + 110},${targetY + (ands.length - 1) * 35}`, Num_Inputs: `${ands.length} _Inputs`, label: label });
-        ands.forEach((a, k) => queueConnector(`${a}-out`, `${or}-in${k}`, k * 3));
-        return `${or}-out`;
+        
+        if (ands.length === 0) return;
+        if (ands.length === 1) {
+            connectToNet(`${ands[0]}-out`, netOut, 'out');
+        } else {
+            const orY = targetY + (ands.length - 1) * 50;
+            const or = createItem('Or Gate', { Pos: `${targetX + 120},${orY}`, Num_Inputs: `${ands.length} _Inputs`, label: netOut });
+            ands.forEach((a, k) => {
+                const offS = getPinOffset('And Gate', 'out');
+                const offE = getPinOffset('Or Gate', `in${k}`, ands.length);
+                const x1 = itemData[a].x + offS[0], y1 = itemData[a].y + offS[1];
+                const x2 = itemData[or].x + offE[0], y2 = itemData[or].y + offE[1];
+                connItems.push(`<item itemtype="Connector" uid="Connector-${uidCount++}" startpinid="${a}-out" endpinid="${or}-in${k}" pointList="${x1},${y1},${(x1+x2)/2},${y1},${(x1+x2)/2},${y2},${x2},${y2}" />`);
+            });
+            connectToNet(`${or}-out`, netOut, 'out');
+        }
     };
 
-    stateEqs.forEach((eq, i) => {
-        const p = processEq(eq, XS + COL_W * 1.0, YS + i * 250, `D${nBits - 1 - i}`);
-        if (p) queueConnector(p, `${ffIds[i]}-in0`, 15);
-    });
+    stateEqs.forEach((eq, i) => processEq(eq, XS + COL_W * 1.0, YS + i * 250, `D${nBits - 1 - i}`));
 
     outputEqs.forEach((eq, i) => {
-        const p = processEq(eq, XS + COL_W * 3.4, YS + (i + nBits) * 200, `Z${nOut - 1 - i}`);
-        const led = createItem('Led', { Pos: `${XS + COL_W * 4.8},${YS + (i + nBits) * 200}`, label: `Z${nOut - 1 - i}` });
-        if (p) queueConnector(p, `${led}-lPin`, 30);
-        const res = createItem('Resistor', { Pos: `${XS + COL_W * 4.8},${YS + (i + nBits) * 200 + 40}`, Resistance: "100 Ohm", Show_Val: "true", ShowProp: "Resistance" });
-        queueConnector(`${led}-rPin`, `${res}-lPin`);
-        const gnd = createItem('Ground', { Pos: `${XS + COL_W * 4.8},${YS + (i + nBits) * 200 + 70}` });
-        queueConnector(`${res}-rPin`, `${gnd}-Gnd`);
-    });
-
-    // --- Final Step: Junction & Connector Generation ---
-    const connectionsBySource = {};
-    pendingConns.forEach(conn => {
-        if (!connectionsBySource[conn.startPinId]) connectionsBySource[conn.startPinId] = [];
-        connectionsBySource[conn.startPinId].push(conn);
-    });
-
-    const createFinalConnector = (sId, eId, points) => {
-        connItems.push(`<item itemtype="Connector" uid="Connector_${uidCount++}" startpinid="${sId}" endpinid="${eId}" pointList="${points.join(',')}" />`);
-    };
-
-    Object.keys(connectionsBySource).forEach(sourceId => {
-        const conns = connectionsBySource[sourceId];
-        const partsS = sourceId.split('-'), pinS = partsS.pop(), idS = partsS.join('-');
-        const cS = itemData[idS];
-        if (!cS) return;
-        const offS = getPinOffset(cS.type, pinS, cS.nInps);
-        const x1 = cS.x + offS[0], y1 = cS.y + offS[1];
-
-        if (conns.length === 1) {
-            const conn = conns[0];
-            const partsE = conn.endPinId.split('-'), pinE = partsE.pop(), idE = partsE.join('-');
-            const cE = itemData[idE];
-            if (!cE) return;
-            const offE = getPinOffset(cE.type, pinE, cE.nInps);
-            const x2 = cE.x + offE[0], y2 = cE.y + offE[1];
-            let midX = (x1 + x2) / 2 + conn.jitter;
-            if (cS.type === 'FlipFlopD' && x1 > x2) midX = x1 + (30 + conn.jitter);
-            else if (cE.type === 'FlipFlopD' && x1 > x2) midX = x2 - (20 + conn.jitter);
-            createFinalConnector(sourceId, conn.endPinId, [x1, y1, midX, y1, midX, y2, x2, y2]);
-        } else {
-            // BRANCHING: Source -> Node -> Target1, Target2...
-            // Use midX of the first target as Node position
-            const firstConn = conns[0];
-            const partsF = firstConn.endPinId.split('-'), pinF = partsF.pop(), idF = partsF.join('-');
-            const cF = itemData[idF];
-            if (!cF) return;
-            let midXBase = (x1 + cF.x + getPinOffset(cF.type, pinF, cF.nInps)[0]) / 2 + firstConn.jitter;
-            if (cS.type === 'FlipFlopD' && x1 > cF.x) midXBase = x1 + (30 + firstConn.jitter);
-
-            const nodePos = `${midXBase},${y1}`;
-            const nodeId = createItem('Node', { Pos: nodePos });
-
-            // Connection: Source -> Node Input (pin0)
-            createFinalConnector(sourceId, `${nodeId}-0`, [x1, y1, midXBase, y1]);
-
-            // Connections: Node Output (pinN) -> Targetes
-            conns.forEach((conn, k) => {
-                const partsE = conn.endPinId.split('-'), pinE = partsE.pop(), idE = partsE.join('-');
-                const cE = itemData[idE];
-                if (!cE) return;
-                const offE = getPinOffset(cE.type, pinE, cE.nInps);
-                const x2 = cE.x + offE[0], y2 = cE.y + offE[1];
-                const nodePinOut = `${nodeId}-${k+1}`;
-                // Points: from Node (midXBase, y1) to Target (x2, y2)
-                createFinalConnector(nodePinOut, conn.endPinId, [midXBase, y1, midXBase, y2, x2, y2]);
-            });
-        }
+        const netZ = `Z${nOut - 1 - i}`;
+        processEq(eq, XS + COL_W * 3.4, YS + (i + nBits) * 200, netZ);
+        const ledX = XS + COL_W * 4.8, ledY = YS + (i + nBits) * 200;
+        const led = createItem('Led', { Pos: `${ledX},${ledY}`, label: netZ });
+        connectToNet(`${led}-lPin`, netZ, 'in');
+        
+        const resX = ledX, resY = ledY + 40;
+        const res = createItem('Resistor', { Pos: `${resX},${resY}`, Resistance: "100 Ohm", Show_Val: "true", ShowProp: "Resistance" });
+        createStubConnector(`${led}-rPin`, `${res}-lPin`, ledX-16, ledY, resX-16, resY);
+        
+        const gndX = ledX, gndY = ledY + 72;
+        const gnd = createItem('Ground', { Pos: `${gndX},${gndY}` });
+        createStubConnector(`${res}-rPin`, `${gnd}-Gnd`, resX+16, resY, gndX, gndY-8);
     });
 
     const xml = `<circuit version="1.1.0" rev="1912+dfsg-4build2" stepSize="1000000" stepsPS="1000000" NLsteps="100000" reaStep="1000000" animate="1" >\n\n${compItems.join('\n\n')}\n\n${connItems.join('\n\n')}\n\n</circuit>`;
