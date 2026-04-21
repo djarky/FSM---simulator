@@ -4,8 +4,8 @@ import { getSVGPoint } from './utils.js';
 import { showModal, showConfirm, showSavePrompt } from './modals.js';
 import { updateAnalysis } from './analysis.js';
 import { updateSimulationPanel, triggerClock } from './simulation.js';
-import { exportToSimulIDE } from './simulide-export.js?v=9';
-import { exportToKiCad } from './kicad-export.js?v=9';
+import { exportToSimulIDE } from './simulide-export.js?v=10';
+import { exportToKiCad } from './kicad-export.js?v=10';
 import { exportToLivewire } from './livewire-export.js';
 
 /**

@@ -28,7 +28,7 @@ function getPinOffset(type, pinName, nInputs = 2) {
 }
 
 export function exportToSimulIDE(app, filename) {
-    console.log('[SimulIDE] Tunnel/Tag Version v9 loaded');
+    console.log('[SimulIDE] Tunnel/Tag Version v10 loaded');
     if (app.states.length === 0) {
         alert("Diseña una máquina primero.");
         return;

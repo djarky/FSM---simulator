@@ -235,15 +235,18 @@ ${pinDeclarations}
 
         if (andLabels.length === 0) return;
         if (andLabels.length === 1) {
-            addLabel(andLabels[0], logicXS - 10, eqY, 180, "output");
-            wirePinToLabel(labelOut, logicXS, eqY + 10, logicXS + 10, eqY + 10, 0, "input");
+            // Draw a direct wire bridge for single terms
+            const x1 = logicXS - 10, x2 = logicXS + 10;
+            wiresLabels.push(`\t(wire\n\t\t(pts (xy ${x1} ${eqY}) (xy ${x2} ${eqY}))\n\t\t(stroke (width 0) (type default))\n\t\t(uuid "${uuidv4()}")\n\t)`);
+            addLabel(andLabels[0], x1, eqY, 180, "output");
+            addLabel(labelOut, x2, eqY, 0, "input");
         } else {
             let currentIn1 = andLabels[0];
             for (let i = 1; i < andLabels.length; i++) {
                 const isLast = (i === andLabels.length - 1);
                 const outLabel = isLast ? labelOut : `${labelOut}_OR_CHAIN_${uuidv4().substring(0,4)}`;
                 const a = allocate('OR');
-                const xPos = logicXS + 50 + (i * 20); const yPos = eqY + 20;
+                const xPos = logicXS + 50 + (i * 20); const yPos = eqY;
                 const pins = [ [1,2,3], [4,5,6], [9,10,8], [12,13,11] ][a.unit-1].map(String);
                 addInstance(a.lib, a.ref, a.unit, xPos, yPos, "", 0, pins);
                 wirePinToLabel(currentIn1, xPos - 7.62, yPos - 2.54, xPos - 12.62, yPos - 2.54, 180, "output");
@@ -252,20 +255,28 @@ ${pinDeclarations}
                 currentIn1 = outLabel;
             }
         }
-        eqY += 60;
+        eqY += 30; // Consistent spacing
     };
 
     stateEqs.forEach((eq, i) => buildEquation(eq, `D${i}`));
+    
+    // Position LEDs after equations to avoid overlap and improve alignment
+    eqY += 20; 
     outputEqs.forEach((eq, i) => {
         const zLbl = `Z${i}`;
+        const currentY = eqY;
         buildEquation(eq, zLbl);
-        const xPos = logicXS + 220; const yPos = YS + i * 20;
+        
+        const xPos = logicXS + 220; const yPos = currentY;
         addInstance("Device:LED", `D${i+1}`, 1, xPos, yPos, zLbl, 180, ["1", "2"]);
-        addInstance("Device:R", `R${i+1}`, 1, xPos + 10, yPos + 5, "330", 0, ["1", "2"]);
+        addInstance("Device:R", `R${i+1}`, 1, xPos + 15, yPos, "330", 90, ["1", "2"]);
+        
+        // Connect LED to Label
         wirePinToLabel(zLbl, xPos - 3.81, yPos, xPos - 8.81, yPos, 180, "output"); 
-        wiresLabels.push(`\t(wire\n\t\t(pts\n\t\t\t(xy ${xPos + 3.81} ${yPos}) (xy ${xPos + 10} ${yPos})\n\t\t)\n\t\t(stroke (width 0) (type default))\n\t\t(uuid "${uuidv4()}")\n\t)`);
-        wiresLabels.push(`\t(wire\n\t\t(pts\n\t\t\t(xy ${xPos + 10} ${yPos}) (xy ${xPos + 10} ${yPos + 1.19})\n\t\t)\n\t\t(stroke (width 0) (type default))\n\t\t(uuid "${uuidv4()}")\n\t)`);
-        wirePinToLabel("GND", xPos + 10, yPos + 8.81, xPos + 10, yPos + 12, 270, "input");
+        // Connect LED to Resistor
+        wiresLabels.push(`\t(wire\n\t\t(pts (xy ${xPos + 3.81} ${yPos}) (xy ${xPos + 11.19} ${yPos}))\n\t\t(stroke (width 0) (type default))\n\t\t(uuid "${uuidv4()}")\n\t)`);
+        // Connect Resistor to GND
+        wirePinToLabel("GND", xPos + 18.81, yPos, xPos + 23.81, yPos, 0, "input");
     });
 
     let pwrX = logicXS + 300, pwrY = YS;
