@@ -14,3 +14,9 @@ export function getPointOnPath(d, t) {
     const len = tempPath.getTotalLength();
     return tempPath.getPointAtLength(len * t);
 }
+export function getGrayCode(bits) {
+    if (bits === 0) return [""];
+    if (bits === 1) return ["0", "1"];
+    const prev = getGrayCode(bits - 1);
+    return [...prev.map(s => "0" + s), ...[...prev].reverse().map(s => "1" + s)];
+}

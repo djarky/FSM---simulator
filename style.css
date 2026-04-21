@@ -387,6 +387,21 @@ body, html {
     line-height: 1.4;
 }
 
+.super-equation {
+    border-left-color: var(--primary);
+    background: rgba(0, 210, 255, 0.05);
+    font-style: italic;
+    color: var(--primary);
+}
+
+.equation-group {
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 15px;
+    background: rgba(255,255,255,0.01);
+}
+
 .truth-table {
     width: 100%;
     border-collapse: collapse;

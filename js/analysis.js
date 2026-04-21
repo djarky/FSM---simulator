@@ -1,5 +1,7 @@
 import { minimize } from './logic-engine.js';
 import { matchInput } from './models.js';
+import { getGrayCode } from './utils.js';
+import { getSuperSimplified } from './algebraic-simplifier.js';
 
 /**
  * --- ANALYSIS ---
@@ -75,42 +77,80 @@ export function updateAnalysis(tab, app, container) {
                 }
             }
         });
+        
+        // Calculate Don't Cares (unused state binary codes)
+        const nDC = [];
+        const totalPossibleStates = 1 << nBits;
+        const nInCount = 1 << nIn;
+        for (let idx = app.states.length; idx < totalPossibleStates; idx++) {
+            for (let i = 0; i < nInCount; i++) {
+                nDC.push((idx << nIn) | i);
+            }
+        }
 
         if (tab === 'equations') {
             let h = `<h3>Ecuaciones Siguiente Estado (Q+)</h3>`;
             for(let b=0; b<nBits; b++) {
-                const res = minimize(nVars, nMS[b], [], nBits, nIn);
+                const res = minimize(nVars, nMS[b], nDC, nBits, nIn);
                 const bitName = nBits > 1 ? `Q${nBits-1-b}+` : "Q+";
+                const superSim = getSuperSimplified(res.selection.map(s => s.pi), nVars, nBits, nIn);
+                h += `<div class="equation-group">`;
                 h += `<div class="equation">${bitName} = ${res.text}</div>`;
+                if (superSim !== res.text.replace(/<[^>]*>/g, '')) {
+                    h += `<div class="equation super-equation">Opt: ${bitName} = ${superSim}</div>`;
+                }
+                h += `</div>`;
             }
             h += `<h3 style="margin-top:20px">Ecuaciones Salida (Z)</h3>`;
             for(let o=0; o<nOut; o++) {
-                const res = minimize(nVars, nMO[o], [], nBits, nIn);
+                const res = minimize(nVars, nMO[o], nDC, nBits, nIn);
                 const outName = nOut > 1 ? `Z${nOut-1-o}` : "Z";
+                const superSim = getSuperSimplified(res.selection.map(s => s.pi), nVars, nBits, nIn);
+                h += `<div class="equation-group">`;
                 h += `<div class="equation">${outName} = ${res.text}</div>`;
+                if (superSim !== res.text.replace(/<[^>]*>/g, '')) {
+                    h += `<div class="equation super-equation">Opt: ${outName} = ${superSim}</div>`;
+                }
+                h += `</div>`;
             }
             container.innerHTML = h + `<p style="font-size:0.75rem; color:var(--text-muted); margin-top:20px">Vbles: Q = Bits de Estado, X = Bits de Entrada</p>`;
         } else {
-            if (nVars > 4) { container.innerHTML = "Mapas de Karnaugh visuales limitados a 4 variables."; return; }
-            const gray = ["00", "01", "11", "10"], gray1 = ["0", "1"];
-            const rowCodes = nVars === 4 ? gray : gray1;
-            const colCodes = (nVars === 4 || nVars === 3) ? gray : gray1;
+            if (nVars > 6) { 
+                container.innerHTML = `<h3>Mapas de Karnaugh</h3><p>Mapas visuales limitados a 6 variables. Por favor, usa la pestaña de <b>Ecuaciones</b> para ver los resultados de la simplificación de tus ${nVars} variables.</p>`; 
+                return; 
+            }
+            
+            const rowBits = Math.floor(nVars / 2);
+            const colBits = nVars - rowBits;
+            const rowCodes = getGrayCode(rowBits);
+            const colCodes = getGrayCode(colBits);
 
             const renderMap = (title, mList) => {
-                const res = minimize(nVars, mList, [], nBits, nIn);
+                const res = minimize(nVars, mList, nDC, nBits, nIn);
                 let h = `<div class="kmap-container"><p><b>${title}</b></p><div class="kmap-grid">`;
                 
                 // Construct axis label
-                const qVars = nBits > 1 ? `Q${nBits-1}..0` : "Q";
-                const xVars = nIn > 1 ? `X${nIn-1}..0` : "X";
-                h += `<div class="kmap-row"><div class="kmap-cell" style="border:none; font-size:0.6rem">${qVars}\\${xVars}</div>${colCodes.map(c => `<div class="kmap-header">${c}</div>`).join('')}</div>`;
+                // Q variables are the first nBits, X variables are the rest
+                // Variables in the bitstring: Q_{nBits-1}...Q_0 X_{nIn-1}...X_0
+                // We split them into rowBits (MSBs) and colBits (LSBs)
+                
+                let rowVars = [], colVars = [];
+                for (let i = 0; i < nVars; i++) {
+                    let name = (i < nBits) ? `Q${nBits - 1 - i}` : `X${nIn - 1 - (i - nBits)}`;
+                    if (i < rowBits) rowVars.push(name);
+                    else colVars.push(name);
+                }
+
+                const axisLabel = `${rowVars.join('')}\\${colVars.join('')}`;
+                h += `<div class="kmap-row"><div class="kmap-cell" style="border:none; font-size:0.6rem; color:var(--text-muted)">${axisLabel}</div>${colCodes.map(c => `<div class="kmap-header">${c}</div>`).join('')}</div>`;
                 
                 rowCodes.forEach(r => {
                     h += `<div class="kmap-row"><div class="kmap-header">${r}</div>`;
                     colCodes.forEach(c => {
                         const m = parseInt(r + c, 2);
                         const hasVal = mList.includes(m);
-                        h += `<div class="kmap-cell">${hasVal ? '1' : '0'}`;
+                        const isDC = nDC.includes(m);
+                        h += `<div class="kmap-cell">${isDC ? 'X' : (hasVal ? '1' : '0')}`;
                         res.selection.forEach(sel => {
                             let match = true;
                             let ms = m.toString(2).padStart(nVars, '0');
@@ -121,7 +161,12 @@ export function updateAnalysis(tab, app, container) {
                     });
                     h += `</div>`;
                 });
-                return h + `</div><div class="equation" style="font-size:0.8rem">${res.text}</div></div>`;
+                const superSim = getSuperSimplified(res.selection.map(s => s.pi), nVars, nBits, nIn);
+                let footer = `<div class="equation" style="font-size:0.8rem">${res.text}</div>`;
+                if (superSim !== res.text.replace(/<[^>]*>/g, '')) {
+                    footer += `<div class="equation super-equation" style="font-size:0.75rem">Opt: ${superSim}</div>`;
+                }
+                return h + `</div>` + footer + `</div>`;
             };
 
             let fullH = `<h3>Mapas de Karnaugh (Siguiente Estado)</h3>`;

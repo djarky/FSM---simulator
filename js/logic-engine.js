@@ -38,27 +38,48 @@ export function minimize(variables, minterms, dontCares = [], nBits = 0, nIn = 0
         current = next;
     }
 
-    let uncovered = new Set(minterms);
-    let finalSelection = [];
-    let piList = Array.from(primeImplicants).sort((a,b) => (b.match(/-/g)||[]).length - (a.match(/-/g)||[]).length);
-
-    for (let pi of piList) {
-        let isNeeded = false;
-        for (let m of Array.from(uncovered)) {
+    let piList = Array.from(primeImplicants).map(pi => {
+        let covered = [];
+        minterms.forEach(m => {
             let mStr = m.toString(2).padStart(variables, '0');
             let match = true;
             for (let k = 0; k < variables; k++) if (pi[k] !== '-' && pi[k] !== mStr[k]) { match = false; break; }
-            if (match) { isNeeded = true; break; }
-        }
-        if (isNeeded) {
-            finalSelection.push(pi);
-            for (let m of Array.from(uncovered)) {
-                let mStr = m.toString(2).padStart(variables, '0');
-                let match = true;
-                for (let k = 0; k < variables; k++) if (pi[k] !== '-' && pi[k] !== mStr[k]) { match = false; break; }
-                if (match) uncovered.delete(m);
+            if (match) covered.push(m);
+        });
+        return { pi, covered };
+    });
+
+    // 1. Identify Essential Prime Implicants
+    let finalSelection = [];
+    let uncovered = new Set(minterms);
+
+    while (true) {
+        let counts = {};
+        uncovered.forEach(m => counts[m] = 0);
+        piList.forEach(p => p.covered.forEach(m => { if (uncovered.has(m)) counts[m]++; }));
+
+        let essentialPIs = piList.filter(p => p.covered.some(m => uncovered.has(m) && counts[m] === 1));
+        if (essentialPIs.length === 0) break;
+
+        essentialPIs.forEach(p => {
+            if (!finalSelection.some(f => f === p.pi)) {
+                finalSelection.push(p.pi);
+                p.covered.forEach(m => uncovered.delete(m));
             }
-        }
+        });
+        // Remove PIs that cover nothing new
+        piList = piList.filter(p => p.covered.some(m => uncovered.has(m)));
+    }
+
+    // 2. Solve the remaining chart (Greedy with lookahead or simple recursion)
+    // For small sets, greedy is often enough if we already took EPIs. 
+    // Let's use a refined greedy: pick the PI that covers the MOST uncovered minterms.
+    while (uncovered.size > 0) {
+        piList.sort((a, b) => b.covered.filter(m => uncovered.has(m)).length - a.covered.filter(m => uncovered.has(m)).length);
+        let best = piList[0];
+        finalSelection.push(best.pi);
+        best.covered.forEach(m => uncovered.delete(m));
+        piList = piList.filter(p => p.covered.some(m => uncovered.has(m)));
     }
 
     const terms = finalSelection.map((pi, idx) => {
