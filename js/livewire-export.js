@@ -170,7 +170,7 @@ export function exportToLivewire(app, filename) {
         setTimeout(() => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-        }, 150);
+        }, 20000);
 
     } catch (error) {
         console.error("Fallo al exportar a Livewire:", error);

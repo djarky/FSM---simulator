@@ -52,7 +52,7 @@ export function exportToKiCad(app, filename) {
 
     const rootUuid = uuidv4();
     const projectName = filename ? filename.replace('.kicad_sch', '') : "fsm_project";
-    
+
     const nBits = app.bits;
     const isMoore = app.machineType === 'MOORE';
     let nIn = 1, nOut = 1;
@@ -92,8 +92,8 @@ export function exportToKiCad(app, filename) {
 
     let chipAllocators = {
         AND: { ref: 'U_AND', lib: '74xx:74LS08', maxUnits: 4, count: 0, pwrUnit: 5 },
-        OR:  { ref: 'U_OR',  lib: '74xx:74LS32', maxUnits: 4, count: 0, pwrUnit: 5 },
-        FF:  { ref: 'U_FF',  lib: '74xx:74LS74', maxUnits: 2, count: 0, pwrUnit: 3 }
+        OR: { ref: 'U_OR', lib: '74xx:74LS32', maxUnits: 4, count: 0, pwrUnit: 5 },
+        FF: { ref: 'U_FF', lib: '74xx:74LS74', maxUnits: 2, count: 0, pwrUnit: 3 }
     };
 
     function allocate(type) {
@@ -104,19 +104,19 @@ export function exportToKiCad(app, filename) {
         return { ref: `${alloc.ref}${chipIdx}`, unit: unitIdx, lib: alloc.lib };
     }
 
-    function addLabel(name, x, y, rot=0, shape="input") {
+    function addLabel(name, x, y, rot = 0, shape = "input") {
         wiresLabels.push(`\t(global_label "${name}"\n\t\t(shape ${shape})\n\t\t(at ${x} ${y} ${rot})\n\t\t(uuid "${uuidv4()}")\n\t\t(property "Intersheetrefs" "\\\${INTERSHEET_REFS}"\n\t\t\t(at ${x} ${y} 0)\n\t\t\t(effects\n\t\t\t\t(font\n\t\t\t\t\t(size 1.27 1.27)\n\t\t\t\t)\n\t\t\t\t(hide yes)\n\t\t\t)\n\t\t)\n\t)`);
     }
 
-    function wirePinToLabel(labelName, pinX, pinY, labelX, labelY, labelRot, labelShape="input") {
+    function wirePinToLabel(labelName, pinX, pinY, labelX, labelY, labelRot, labelShape = "input") {
         wiresLabels.push(`\t(wire\n\t\t(pts\n\t\t\t(xy ${pinX} ${pinY}) (xy ${labelX} ${labelY})\n\t\t)\n\t\t(stroke\n\t\t\t(width 0)\n\t\t\t(type default)\n\t\t)\n\t\t(uuid "${uuidv4()}")\n\t)`);
         addLabel(labelName, labelX, labelY, labelRot, labelShape);
     }
 
-    function addInstance(lib, ref, unit, x, y, value="", rot=0, pins=[]) {
+    function addInstance(lib, ref, unit, x, y, value = "", rot = 0, pins = []) {
         const uid = uuidv4();
         const pinDeclarations = pins.map(p => `\t\t(pin "${p}" (uuid "${uuidv4()}"))`).join('\n');
-        
+
         let footprint = FOOTPRINT_MAP[lib] || "";
         if (!footprint && lib.includes("Conn_01x")) {
             const num = lib.split('x')[1].split('_')[0];
@@ -169,21 +169,21 @@ ${pinDeclarations}
     const numPins = 3 + (2 * nIn);
     const connLib = `Connector:Conn_01x${numPins.toString().padStart(2, '0')}_Pin`;
     const connX = XS, connY = YS + (numPins * 1.27);
-    const allPins = Array.from({length: numPins}, (_, i) => (i + 1).toString());
+    const allPins = Array.from({ length: numPins }, (_, i) => (i + 1).toString());
     addInstance(connLib, "J_INPUTS", 1, connX, connY, "Inputs / Power", 0, allPins);
 
     const getPinY = (pinIdx) => connY + (1.27 * (numPins - 1) - 2.54 * (pinIdx - 1));
-    
-    wirePinToLabel("VCC", connX + 5.08, getPinY(1), connX + 10.08, getPinY(1), 0, "input");
-    wirePinToLabel("GND", connX + 5.08, getPinY(2), connX + 10.08, getPinY(2), 0, "input");
-    wirePinToLabel("CLK", connX + 5.08, getPinY(3), connX + 10.08, getPinY(3), 0, "input");
-    
+
+    wirePinToLabel("VCC", connX + 5.08, getPinY(1), connX + 10.08, getPinY(1), 0, "input"); // Tag a la derecha
+    wirePinToLabel("GND", connX + 5.08, getPinY(2), connX + 10.08, getPinY(2), 0, "input"); // Tag a la derecha
+    wirePinToLabel("CLK", connX + 5.08, getPinY(3), connX + 10.08, getPinY(3), 0, "input"); // Tag a la derecha
+
     for (let i = 0; i < nIn; i++) {
         const pinX = 4 + (i * 2);
         const pinNotX = pinX + 1;
         const name = `X${nIn - 1 - i}`;
-        wirePinToLabel(name, connX + 5.08, getPinY(pinX), connX + 10.08, getPinY(pinX), 0, "input");
-        wirePinToLabel(`!${name}`, connX + 5.08, getPinY(pinNotX), connX + 10.08, getPinY(pinNotX), 0, "input");
+        wirePinToLabel(name, connX + 5.08, getPinY(pinX), connX + 10.08, getPinY(pinX), 0, "input"); // Tag a la derecha
+        wirePinToLabel(`!${name}`, connX + 5.08, getPinY(pinNotX), connX + 10.08, getPinY(pinNotX), 0, "input"); // Tag a la derecha
     }
 
     const dynamicLibSymbols = KICAD_LIB_SYMBOLS.replace(/\)\s*$/, generateConnectorSymbol(numPins) + "\n)");
@@ -194,12 +194,12 @@ ${pinDeclarations}
         const xPos = logicXS + 120; const yPos = YS + i * 25;
         const pins = a.unit === 1 ? ["2", "3", "4", "1", "5", "6"] : ["12", "11", "10", "13", "9", "8"];
         addInstance(a.lib, a.ref, a.unit, xPos, yPos, "", 0, pins);
-        wirePinToLabel(`D${nBits-1-i}`, xPos - 7.62, yPos - 2.54, xPos - 12.62, yPos - 2.54, 180, "output");
-        wirePinToLabel(`CLK`, xPos - 7.62, yPos, xPos - 12.62, yPos, 180, "output");
-        wirePinToLabel(`VCC`, xPos, yPos - 7.62, xPos, yPos - 12.62, 90, "input");
-        wirePinToLabel(`VCC`, xPos, yPos + 7.62, xPos, yPos + 12.62, 270, "input");
-        wirePinToLabel(`Q${nBits-1-i}`, xPos + 7.62, yPos - 2.54, xPos + 12.62, yPos - 2.54, 0, "input");
-        wirePinToLabel(`!Q${nBits-1-i}`, xPos + 7.62, yPos + 2.54, xPos + 12.62, yPos + 2.54, 0, "input");
+        wirePinToLabel(`D${nBits - 1 - i}`, xPos - 7.62, yPos - 2.54, xPos - 12.62, yPos - 2.54, 0, "input"); // Tag a la izquierda
+        wirePinToLabel(`CLK`, xPos - 7.62, yPos, xPos - 12.62, yPos, 0, "input"); // Tag a la izquierda
+        wirePinToLabel(`VCC`, xPos, yPos - 7.62, xPos, yPos - 12.62, 90, "input"); // Tag arriba
+        wirePinToLabel(`VCC`, xPos, yPos + 7.62, xPos, yPos + 12.62, 270, "input"); // Tag abajo
+        wirePinToLabel(`Q${nBits - 1 - i}`, xPos + 7.62, yPos - 2.54, xPos + 12.62, yPos - 2.54, 0, "input"); // Tag a la derecha
+        wirePinToLabel(`!Q${nBits - 1 - i}`, xPos + 7.62, yPos + 2.54, xPos + 12.62, yPos + 2.54, 0, "input"); // Tag a la derecha
     }
 
     let eqY = YS + Math.max(nBits * 25, numPins * 2.54) + 20;
@@ -220,15 +220,15 @@ ${pinDeclarations}
             let currentIn1 = termInputs[0];
             for (let i = 1; i < termInputs.length; i++) {
                 const isLast = (i === termInputs.length - 1);
-                const outLabel = isLast ? `${labelOut}_AND${termIdx}` : `${labelOut}_AND_CHAIN_${uuidv4().substring(0,4)}`;
+                const outLabel = isLast ? `${labelOut}_AND${termIdx}` : `${labelOut}_AND_CHAIN_${uuidv4().substring(0, 4)}`;
                 if (isLast) andLabels.push(outLabel);
                 const a = allocate('AND');
                 const xPos = logicXS + (i * 20); const yPos = eqY + termIdx * 15;
-                const pins = [ [1,2,3], [4,5,6], [9,10,8], [12,13,11] ][a.unit-1].map(String);
+                const pins = [[1, 2, 3], [4, 5, 6], [9, 10, 8], [12, 13, 11]][a.unit - 1].map(String);
                 addInstance(a.lib, a.ref, a.unit, xPos, yPos, "", 0, pins);
-                wirePinToLabel(currentIn1, xPos - 7.62, yPos - 2.54, xPos - 12.62, yPos - 2.54, 180, "output");
-                wirePinToLabel(termInputs[i], xPos - 7.62, yPos + 2.54, xPos - 12.62, yPos + 2.54, 180, "output");
-                wirePinToLabel(outLabel, xPos + 7.62, yPos, xPos + 12.62, yPos, 0, "input");
+                wirePinToLabel(currentIn1, xPos - 7.62, yPos - 2.54, xPos - 12.62, yPos - 2.54, 180, "input"); // Tag a la izquierda
+                wirePinToLabel(termInputs[i], xPos - 7.62, yPos + 2.54, xPos - 12.62, yPos + 2.54, 180, "input"); // Tag a la izquierda
+                wirePinToLabel(outLabel, xPos + 7.62, yPos, xPos + 12.62, yPos, 0, "input"); // Tag a la derecha
                 currentIn1 = outLabel;
             }
         });
@@ -238,20 +238,20 @@ ${pinDeclarations}
             // Draw a direct wire bridge for single terms
             const x1 = logicXS - 10, x2 = logicXS + 10;
             wiresLabels.push(`\t(wire\n\t\t(pts (xy ${x1} ${eqY}) (xy ${x2} ${eqY}))\n\t\t(stroke (width 0) (type default))\n\t\t(uuid "${uuidv4()}")\n\t)`);
-            addLabel(andLabels[0], x1, eqY, 180, "output");
-            addLabel(labelOut, x2, eqY, 0, "input");
+            addLabel(andLabels[0], x1, eqY, 180, "input"); // Tag a la izquierda
+            addLabel(labelOut, x2, eqY, 0, "input"); // Tag a la derecha
         } else {
             let currentIn1 = andLabels[0];
             for (let i = 1; i < andLabels.length; i++) {
                 const isLast = (i === andLabels.length - 1);
-                const outLabel = isLast ? labelOut : `${labelOut}_OR_CHAIN_${uuidv4().substring(0,4)}`;
+                const outLabel = isLast ? labelOut : `${labelOut}_OR_CHAIN_${uuidv4().substring(0, 4)}`;
                 const a = allocate('OR');
                 const xPos = logicXS + 50 + (i * 20); const yPos = eqY;
-                const pins = [ [1,2,3], [4,5,6], [9,10,8], [12,13,11] ][a.unit-1].map(String);
+                const pins = [[1, 2, 3], [4, 5, 6], [9, 10, 8], [12, 13, 11]][a.unit - 1].map(String);
                 addInstance(a.lib, a.ref, a.unit, xPos, yPos, "", 0, pins);
-                wirePinToLabel(currentIn1, xPos - 7.62, yPos - 2.54, xPos - 12.62, yPos - 2.54, 180, "output");
-                wirePinToLabel(andLabels[i], xPos - 7.62, yPos + 2.54, xPos - 12.62, yPos + 2.54, 180, "output");
-                wirePinToLabel(outLabel, xPos + 7.62, yPos, xPos + 12.62, yPos, 0, "input");
+                wirePinToLabel(currentIn1, xPos - 7.62, yPos - 2.54, xPos - 12.62, yPos - 2.54, 180, "input"); // Tag a la izquierda
+                wirePinToLabel(andLabels[i], xPos - 7.62, yPos + 2.54, xPos - 12.62, yPos + 2.54, 180, "input"); // Tag a la izquierda
+                wirePinToLabel(outLabel, xPos + 7.62, yPos, xPos + 12.62, yPos, 0, "input"); // Tag a la derecha
                 currentIn1 = outLabel;
             }
         }
@@ -259,24 +259,24 @@ ${pinDeclarations}
     };
 
     stateEqs.forEach((eq, i) => buildEquation(eq, `D${i}`));
-    
+
     // Position LEDs after equations to avoid overlap and improve alignment
-    eqY += 20; 
+    eqY += 20;
     outputEqs.forEach((eq, i) => {
         const zLbl = `Z${i}`;
         const currentY = eqY;
         buildEquation(eq, zLbl);
-        
+
         const xPos = logicXS + 220; const yPos = currentY;
-        addInstance("Device:LED", `D${i+1}`, 1, xPos, yPos, zLbl, 180, ["1", "2"]);
-        addInstance("Device:R", `R${i+1}`, 1, xPos + 15, yPos, "330", 90, ["1", "2"]);
-        
+        addInstance("Device:LED", `D${i + 1}`, 1, xPos, yPos, zLbl, 180, ["1", "2"]);
+        addInstance("Device:R", `R${i + 1}`, 1, xPos + 15, yPos, "330", 90, ["1", "2"]);
+
         // Connect LED to Label
-        wirePinToLabel(zLbl, xPos - 3.81, yPos, xPos - 8.81, yPos, 180, "output"); 
+        wirePinToLabel(zLbl, xPos - 3.81, yPos, xPos - 8.81, yPos, 180, "input"); // Tag a la izquierda
         // Connect LED to Resistor
         wiresLabels.push(`\t(wire\n\t\t(pts (xy ${xPos + 3.81} ${yPos}) (xy ${xPos + 11.19} ${yPos}))\n\t\t(stroke (width 0) (type default))\n\t\t(uuid "${uuidv4()}")\n\t)`);
         // Connect Resistor to GND
-        wirePinToLabel("GND", xPos + 18.81, yPos, xPos + 23.81, yPos, 0, "input");
+        wirePinToLabel("GND", xPos + 18.81, yPos, xPos + 23.81, yPos, 0, "input"); // Tag a la derecha
     });
 
     let pwrX = logicXS + 300, pwrY = YS;
@@ -286,8 +286,8 @@ ${pinDeclarations}
         for (let i = 1; i <= numChips; i++) {
             const ref = `${alloc.ref}${i}`;
             addInstance(alloc.lib, ref, alloc.pwrUnit, pwrX, pwrY, "PWR", 0, ["14", "7"]);
-            wirePinToLabel("VCC", pwrX, pwrY - 7.62, pwrX, pwrY - 12.62, 90, "input");
-            wirePinToLabel("GND", pwrX, pwrY + 7.62, pwrX, pwrY + 12.62, 270, "input");
+            wirePinToLabel("VCC", pwrX, pwrY - 7.62, pwrX, pwrY - 12.62, 90, "input"); // Tag arriba
+            wirePinToLabel("GND", pwrX, pwrY + 7.62, pwrX, pwrY + 12.62, 270, "input"); // Tag abajo
             pwrY += 35;
         }
     });
@@ -307,10 +307,10 @@ ${wiresLabels.join('\n')}
 	(embedded_fonts no)
 )`;
 
-    const blob = new Blob([fileContent], { type: 'text/plain' });
+    const blob = new Blob([fileContent], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url;
     let name = (filename || `fsm_${Date.now()}`).replace('.kicad_sch', '') + '.kicad_sch';
     a.download = name; document.body.appendChild(a); a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 20000);
 }

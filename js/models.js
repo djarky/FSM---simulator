@@ -98,7 +98,7 @@ export class AppState {
             machineType: this.machineType,
             nextStateId: this.nextStateId
         };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -114,7 +114,7 @@ export class AppState {
         setTimeout(() => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-        }, 100);
+        }, 20000);
     }
 
     importJSON(data) {

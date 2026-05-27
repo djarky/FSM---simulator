@@ -302,10 +302,10 @@ export function exportToSimulIDE(app, filename) {
 
     const xml = `<circuit version="1.1.0" rev="1912+dfsg-4build2" stepSize="1000000" stepsPS="1000000" NLsteps="100000" reaStep="1000000" animate="1" >\n\n${compItems.join('\n\n')}\n\n${connItems.join('\n\n')}\n\n</circuit>`;
     
-    const blob = new Blob([xml], { type: 'text/plain' });
+    const blob = new Blob([xml], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url;
     let name = (filename || `fsm_${Date.now()}`).replace('.sim1', '') + '.sim1';
     a.download = name; document.body.appendChild(a); a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 20000);
 }

@@ -7,6 +7,7 @@ import { updateSimulationPanel, triggerClock } from './simulation.js';
 import { exportToSimulIDE } from './simulide-export.js?v=10';
 import { exportToKiCad } from './kicad-export.js?v=10';
 import { exportToLivewire } from './livewire-export.js';
+import { exportToWinCUPL } from './wincupl-export.js';
 
 /**
  * --- MAIN ---
@@ -203,6 +204,10 @@ document.getElementById('btn-kicad').onclick = async () => {
 document.getElementById('btn-livewire').onclick = async () => {
     const filename = await showSavePrompt(`fsm_livewire_${new Date().toISOString().slice(0, 10)}`);
     if (filename) exportToLivewire(app, filename);
+};
+document.getElementById('btn-wincupl').onclick = async () => {
+    const filename = await showSavePrompt(`fsm_wincupl_${new Date().toISOString().slice(0, 10)}`);
+    if (filename) exportToWinCUPL(app, filename);
 };
 document.getElementById('btn-load').onclick = () => document.getElementById('file-input').click();
 document.getElementById('file-input').onchange = (e) => {
