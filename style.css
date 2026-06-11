@@ -176,14 +176,14 @@ body, html {
     flex: 1;
     position: relative;
     overflow: hidden;
-    background-image: radial-gradient(var(--border) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-color: var(--bg);
 }
 
 #fsm-svg {
     width: 100%;
     height: 100%;
     cursor: crosshair;
+    touch-action: none;
 }
 
 /* --- SVG Elements --- */
@@ -675,5 +675,143 @@ input:invalid {
 @media screen and (max-height: 768px) {
     .controls { padding: 15px; }
     .control-group { margin-bottom: 16px; }
+}
+
+/* --- Canvas Controls Bubble --- */
+.canvas-controls-container {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 250;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.controls-toggle-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(21, 21, 26, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.controls-toggle-btn:hover {
+    color: var(--primary);
+    border-color: var(--primary);
+    background: rgba(21, 21, 26, 0.75);
+    box-shadow: 0 0 15px var(--primary-glow);
+    transform: scale(1.05);
+}
+
+.controls-toggle-btn.active {
+    color: #000;
+    background: var(--primary);
+    border-color: transparent;
+    box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.controls-toggle-btn.active .toggle-icon {
+    transform: rotate(90deg);
+}
+
+.controls-toggle-btn .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.controls-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(21, 21, 26, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 24px;
+    padding: 12px;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+.canvas-controls-container.expanded .controls-panel {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* Control Buttons */
+.control-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.75rem;
+}
+
+.control-btn:hover {
+    background: rgba(0, 210, 255, 0.12);
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 210, 255, 0.25);
+}
+
+.control-btn:active {
+    transform: translateY(0);
+}
+
+/* D-pad specific layout */
+.dpad-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+}
+
+.dpad-btn {
+    width: 32px;
+    height: 32px;
+}
+
+.divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 4px 8px;
+}
+
+.zoom-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Make sure active pointer states don't cause text selection */
+#fsm-svg {
+    user-select: none;
+    -webkit-user-select: none;
 }
 

@@ -87,6 +87,18 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M9 2v2M15 2v2M9 20v2M15 20v2M20 9h2M20 15h2M2 9h2M2 15h2"></path></svg>
                     Exportar WinCUPL (.pld)
                 </button>
+                <button class="btn btn-primary" id="btn-vhdl" style="margin-top: 10px; font-size: 0.8rem; background: #8e44ad; border-color: #7d3c98; width: 100%;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    Exportar VHDL (.vhd)
+                </button>
+                <button class="btn btn-primary" id="btn-verilog" style="margin-top: 10px; font-size: 0.8rem; background: #1abc9c; border-color: #16a085; width: 100%;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    Exportar Verilog (.v)
+                </button>
+                <button class="btn btn-primary" id="btn-arduino" style="margin-top: 10px; font-size: 0.8rem; background: #00979d; border-color: #008184; width: 100%;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8M12 8v8"></path></svg>
+                    Exportar Arduino (.ino)
+                </button>
 
 
             </div>
@@ -135,13 +147,62 @@
         <div class="instruction-toast" id="toast">Doble clic para crear un estado</div>
         <svg id="fsm-svg">
             <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <circle cx="20" cy="20" r="1.2" fill="rgba(255, 255, 255, 0.08)" />
+                </pattern>
                 <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="24" refY="3.5" orient="auto">
                     <polygon points="0 0, 10 3.5, 0 7" />
                 </marker>
             </defs>
-            <g id="links-layer"></g>
-            <g id="states-layer"></g>
+            <!-- Grid rect that always fills the SVG background -->
+            <rect width="100%" height="100%" fill="url(#grid)" id="grid-rect" pointer-events="none" />
+            <g id="viewport">
+                <g id="links-layer"></g>
+                <g id="states-layer"></g>
+            </g>
         </svg>
+
+        <!-- Controles flotantes de Canvas (Burbuja) -->
+        <div class="canvas-controls-container" id="canvas-controls-container">
+            <button class="controls-toggle-btn" id="controls-toggle" title="Controles de Canvas">
+                <svg class="toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+            <div class="controls-panel" id="controls-panel">
+                <!-- D-pad de desplazamiento -->
+                <div class="dpad-group">
+                    <button class="control-btn dpad-btn" id="pan-up" title="Desplazar Arriba">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                    </button>
+                    <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                        <button class="control-btn dpad-btn" id="pan-left" title="Desplazar Izquierda">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+                        <button class="control-btn dpad-btn" id="pan-right" title="Desplazar Derecha">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                    </div>
+                    <button class="control-btn dpad-btn" id="pan-down" title="Desplazar Abajo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                </div>
+                <div class="divider"></div>
+                <!-- Botones de Zoom -->
+                <div class="zoom-group">
+                    <button class="control-btn" id="zoom-in" title="Acercar (Zoom +)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <button class="control-btn" id="zoom-out" title="Alejar (Zoom -)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <button class="control-btn" id="zoom-reset" title="Restablecer vista (1:1)" style="font-size: 10px; font-weight: 700; font-family: sans-serif;">
+                        1:1
+                    </button>
+                    <button class="control-btn" id="zoom-fit" title="Ajustar Contenido">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <div class="preview-panel" id="analysis-panel" style="display: none;">
             <div class="preview-header">

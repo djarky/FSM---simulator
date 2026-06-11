@@ -8,12 +8,17 @@ import { exportToSimulIDE } from './simulide-export.js?v=10';
 import { exportToKiCad } from './kicad-export.js?v=10';
 import { exportToLivewire } from './livewire-export.js';
 import { exportToWinCUPL } from './wincupl-export.js';
+import { exportToVHDL } from './vhdl-export.js';
+import { exportToVerilog } from './verilog-export.js';
+import { exportToArduino } from './arduino-export.js';
 
 /**
  * --- MAIN ---
  */
 
 const svg = document.getElementById('fsm-svg');
+const viewport = document.getElementById('viewport');
+const gridPattern = document.getElementById('grid');
 const statesLayer = document.getElementById('states-layer');
 const linksLayer = document.getElementById('links-layer');
 const analysisContainer = document.getElementById('tab-content-area');
@@ -40,6 +45,19 @@ let lastClick = 0;
 let lastClickId = null;
 let lastClickType = null;
 
+// Zoom and Pan state
+let currentScale = 1;
+let currentPanX = 0;
+let currentPanY = 0;
+let isPanning = false;
+let panStart = { x: 0, y: 0 };
+let initialPan = { x: 0, y: 0 };
+
+function updateTransform() {
+    viewport.setAttribute('transform', `translate(${currentPanX}, ${currentPanY}) scale(${currentScale})`);
+    gridPattern.setAttribute('patternTransform', `translate(${currentPanX}, ${currentPanY}) scale(${currentScale})`);
+}
+
 function setMode(newMode) {
     app.mode = newMode;
     connectionStart = null;
@@ -58,9 +76,53 @@ function setMode(newMode) {
     app.onRender();
 }
 
-// SVG Events
+// --- Gesture tracking (touch only) ---
+const activePointers = new Map(); // pointerId -> event
+let gestureActive = false; // true when 2-finger gesture in progress
+let initialPinchDistance = 0;
+let initialPinchMidpoint = { clientX: 0, clientY: 0 };
+let initialGestureScale = 1;
+let initialGesturePan = { x: 0, y: 0 };
+
+function getDistance(p1, p2) {
+    const dx = p2.clientX - p1.clientX;
+    const dy = p2.clientY - p1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getMidpoint(p1, p2) {
+    return {
+        clientX: (p1.clientX + p2.clientX) / 2,
+        clientY: (p1.clientY + p2.clientY) / 2
+    };
+}
+
+// --- Primary SVG interaction (clicks, drags, single-finger pan) ---
 svg.addEventListener('pointerdown', (e) => {
-    const svgP = getSVGPoint(e, svg);
+    // Track pointer for gesture detection
+    activePointers.set(e.pointerId, e);
+
+    // If two fingers down -> start pinch/pan gesture, cancel any drag
+    if (activePointers.size === 2) {
+        isDragging = false;
+        dragTarget = null;
+        isPanning = false;
+        gestureActive = true;
+
+        const pts = [...activePointers.values()];
+        initialPinchDistance = getDistance(pts[0], pts[1]);
+        initialGestureScale = currentScale;
+        initialPinchMidpoint = getMidpoint(pts[0], pts[1]);
+        initialGesturePan = { x: currentPanX, y: currentPanY };
+        e.preventDefault();
+        return;
+    }
+
+    // If already in a multi-touch gesture, ignore
+    if (gestureActive) { e.preventDefault(); return; }
+
+    // --- Single pointer logic (mouse or single touch) ---
+    const svgP = getSVGPoint(e, viewport);
     const target = e.target.closest('.state-circle');
     const linkTarget = e.target.closest('.transition-path, .transition-label');
     const isCircle = !!target;
@@ -153,25 +215,102 @@ svg.addEventListener('pointerdown', (e) => {
             app.selectedId = null;
             app.onRender();
         } else {
+            // Background drag -> pan canvas
+            isPanning = true;
+            panStart = { x: e.clientX, y: e.clientY };
+            initialPan = { x: currentPanX, y: currentPanY };
             app.selectedId = null;
             app.onRender();
         }
     }
 });
 
+// --- Pointer Move ---
 window.addEventListener('pointermove', (e) => {
+    // Update pointer in gesture cache
+    if (activePointers.has(e.pointerId)) {
+        activePointers.set(e.pointerId, e);
+    }
+
+    // Two-finger gesture (pinch-to-zoom + pan)
+    if (gestureActive && activePointers.size >= 2) {
+        const pts = [...activePointers.values()];
+        const p1 = pts[0], p2 = pts[1];
+
+        const currentDist = getDistance(p1, p2);
+        const currentMid = getMidpoint(p1, p2);
+
+        let scaleFactor = currentDist / initialPinchDistance;
+        if (isNaN(scaleFactor) || !isFinite(scaleFactor) || scaleFactor === 0) scaleFactor = 1;
+        const newScale = Math.min(Math.max(initialGestureScale * scaleFactor, 0.15), 5);
+
+        const parentPt = getSVGPoint(initialPinchMidpoint, svg);
+        const localPt = getSVGPoint(initialPinchMidpoint, viewport);
+
+        const panDx = currentMid.clientX - initialPinchMidpoint.clientX;
+        const panDy = currentMid.clientY - initialPinchMidpoint.clientY;
+
+        currentScale = newScale;
+        currentPanX = parentPt.x - currentScale * localPt.x + panDx;
+        currentPanY = parentPt.y - currentScale * localPt.y + panDy;
+
+        updateTransform();
+        return;
+    }
+
+    // Single pointer: drag state or pan canvas
     if (isDragging && dragTarget && app.mode === 'SELECT') {
-        const svgP = getSVGPoint(e, svg);
+        const svgP = getSVGPoint(e, viewport);
         dragTarget.x = svgP.x - offset.x;
         dragTarget.y = svgP.y - offset.y;
         app.onRender();
+    } else if (isPanning) {
+        const dx = e.clientX - panStart.x;
+        const dy = e.clientY - panStart.y;
+        currentPanX = initialPan.x + dx;
+        currentPanY = initialPan.y + dy;
+        updateTransform();
     }
 });
 
-window.addEventListener('pointerup', () => {
-    isDragging = false;
-    dragTarget = null;
-});
+// --- Pointer Up / Cancel ---
+const handlePointerUp = (e) => {
+    activePointers.delete(e.pointerId);
+
+    if (activePointers.size < 2) {
+        gestureActive = false;
+        initialPinchDistance = 0;
+    }
+
+    if (activePointers.size === 0) {
+        isDragging = false;
+        dragTarget = null;
+        isPanning = false;
+    }
+};
+
+window.addEventListener('pointerup', handlePointerUp);
+window.addEventListener('pointercancel', handlePointerUp);
+
+// --- Wheel Zoom (mouse scroll) ---
+svg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const direction = e.deltaY < 0 ? 1 : -1;
+    
+    const newScale = direction > 0 ? currentScale * zoomFactor : currentScale / zoomFactor;
+    const clampedScale = Math.min(Math.max(newScale, 0.15), 5);
+    
+    const mousePt = { clientX: e.clientX, clientY: e.clientY };
+    const parentPt = getSVGPoint(mousePt, svg);
+    const localPt = getSVGPoint(mousePt, viewport);
+    
+    currentScale = clampedScale;
+    currentPanX = parentPt.x - currentScale * localPt.x;
+    currentPanY = parentPt.y - currentScale * localPt.y;
+    
+    updateTransform();
+}, { passive: false });
 
 // Sidebar & Mode Toggles
 document.getElementById('mode-select').onclick = () => setMode('SELECT');
@@ -208,6 +347,18 @@ document.getElementById('btn-livewire').onclick = async () => {
 document.getElementById('btn-wincupl').onclick = async () => {
     const filename = await showSavePrompt(`fsm_wincupl_${new Date().toISOString().slice(0, 10)}`);
     if (filename) exportToWinCUPL(app, filename);
+};
+document.getElementById('btn-vhdl').onclick = async () => {
+    const filename = await showSavePrompt(`fsm_vhdl_${new Date().toISOString().slice(0, 10)}`);
+    if (filename) exportToVHDL(app, filename);
+};
+document.getElementById('btn-verilog').onclick = async () => {
+    const filename = await showSavePrompt(`fsm_verilog_${new Date().toISOString().slice(0, 10)}`);
+    if (filename) exportToVerilog(app, filename);
+};
+document.getElementById('btn-arduino').onclick = async () => {
+    const filename = await showSavePrompt(`fsm_arduino_${new Date().toISOString().slice(0, 10)}`);
+    if (filename) exportToArduino(app, filename);
 };
 document.getElementById('btn-load').onclick = () => document.getElementById('file-input').click();
 document.getElementById('file-input').onchange = (e) => {
@@ -293,6 +444,115 @@ window.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// Floating Bubble Controls Binding
+const toggleBtn = document.getElementById('controls-toggle');
+const controlsContainer = document.getElementById('canvas-controls-container');
+
+toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    controlsContainer.classList.toggle('expanded');
+    toggleBtn.classList.toggle('active');
+});
+
+// Close panel when clicking outside
+document.addEventListener('click', (e) => {
+    if (!controlsContainer.contains(e.target)) {
+        controlsContainer.classList.remove('expanded');
+        toggleBtn.classList.remove('active');
+    }
+});
+
+// Zoom operations
+function zoomRelativeToCenter(factor) {
+    const rect = svg.getBoundingClientRect();
+    const centerScreen = {
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2
+    };
+    
+    const parentPt = getSVGPoint(centerScreen, svg);
+    const localPt = getSVGPoint(centerScreen, viewport);
+    
+    const newScale = Math.min(Math.max(currentScale * factor, 0.15), 5);
+    
+    currentScale = newScale;
+    currentPanX = parentPt.x - currentScale * localPt.x;
+    currentPanY = parentPt.y - currentScale * localPt.y;
+    
+    updateTransform();
+}
+
+document.getElementById('zoom-in').addEventListener('click', () => {
+    zoomRelativeToCenter(1.2);
+});
+
+document.getElementById('zoom-out').addEventListener('click', () => {
+    zoomRelativeToCenter(1 / 1.2);
+});
+
+document.getElementById('zoom-reset').addEventListener('click', () => {
+    currentScale = 1;
+    currentPanX = 0;
+    currentPanY = 0;
+    updateTransform();
+});
+
+document.getElementById('zoom-fit').addEventListener('click', () => {
+    if (app.states.length === 0) {
+        currentScale = 1;
+        currentPanX = 0;
+        currentPanY = 0;
+        updateTransform();
+        return;
+    }
+    
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    app.states.forEach(s => {
+        const radius = 50;
+        if (s.x - radius < minX) minX = s.x - radius;
+        if (s.x + radius > maxX) maxX = s.x + radius;
+        if (s.y - radius < minY) minY = s.y - radius;
+        if (s.y + radius > maxY) maxY = s.y + radius;
+    });
+    
+    const bboxW = maxX - minX;
+    const bboxH = maxY - minY;
+    
+    const rect = svg.getBoundingClientRect();
+    const svgW = rect.width;
+    const svgH = rect.height;
+    
+    const paddingMultiplier = 0.85;
+    const scaleX = (svgW * paddingMultiplier) / bboxW;
+    const scaleY = (svgH * paddingMultiplier) / bboxH;
+    let newScale = Math.min(scaleX, scaleY);
+    newScale = Math.min(Math.max(newScale, 0.2), 3);
+    
+    const bboxCenterX = (minX + maxX) / 2;
+    const bboxCenterY = (minY + maxY) / 2;
+    
+    const svgCenterX = svgW / 2;
+    const svgCenterY = svgH / 2;
+    
+    currentScale = newScale;
+    currentPanX = svgCenterX - currentScale * bboxCenterX;
+    currentPanY = svgCenterY - currentScale * bboxCenterY;
+    
+    updateTransform();
+});
+
+// Panning operations
+function panOffset(dx, dy) {
+    currentPanX += dx;
+    currentPanY += dy;
+    updateTransform();
+}
+
+document.getElementById('pan-up').addEventListener('click', () => panOffset(0, 100));
+document.getElementById('pan-down').addEventListener('click', () => panOffset(0, -100));
+document.getElementById('pan-left').addEventListener('click', () => panOffset(100, 0));
+document.getElementById('pan-right').addEventListener('click', () => panOffset(-100, 0));
 
 // Initial Render
 setMode('SELECT');

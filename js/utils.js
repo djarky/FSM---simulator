@@ -2,10 +2,11 @@
  * --- UTILS ---
  */
 
-export function getSVGPoint(e, svg) {
+export function getSVGPoint(e, element) {
+    const svg = element.ownerSVGElement || element;
     const pt = svg.createSVGPoint();
     pt.x = e.clientX; pt.y = e.clientY;
-    return pt.matrixTransform(svg.getScreenCTM().inverse());
+    return pt.matrixTransform(element.getScreenCTM().inverse());
 }
 
 export function getPointOnPath(d, t) {
